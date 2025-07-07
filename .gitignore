@@ -1,0 +1,36 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+.Python/
+build/
+dist/
+
+# Virtual environment
+venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# Operating System
+.DS_Store
+thumbs.db 
+.vercel
+
+# ChromaDB (legacy - no longer used)
+chroma_db/
+*.sqlite3
+
+# Vector databases
+*.faiss
+*.index
+
+# Temporary and test files
+test_*.py
+temp/
+tmp/
