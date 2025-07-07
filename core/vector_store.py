@@ -54,64 +54,56 @@ def get_vector_store():
 
 def get_retriever(index, k=4):
     """
-    Returns a custom retriever that works with Pinecone's integrated embeddings.
+    Returns a simple retriever function that works with Pinecone's integrated embeddings.
+    Using a simple function approach to avoid Pydantic validation issues.
     """
-    from langchain_core.retrievers import BaseRetriever
-    from langchain_core.documents import Document
-    from langchain_core.callbacks import CallbackManagerForRetrieverRun
-    from typing import List, Any
-    from pydantic import Field
-
-    class PineconeIntegratedRetriever(BaseRetriever):
-        index: Any = Field(description="The Pinecone index")
-        k: int = Field(default=4, description="Number of documents to return")
-        
-        class Config:
-            arbitrary_types_allowed = True
-        
-        def _get_relevant_documents(
-            self, query: str, *, run_manager: CallbackManagerForRetrieverRun = None
-        ) -> List[Document]:
-            """
-            Query the index using integrated embeddings.
-            """
-            try:
-                from pinecone import Pinecone
-                pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-                
-                # Generate query embedding using Pinecone's inference API
-                model_name = "multilingual-e5-large"
-                embedding_response = pc.inference.embed(
-                    model=model_name,
-                    inputs=[query],
-                    parameters={"input_type": "query"}
-                )
-                
-                # Get the query vector
-                query_vector = embedding_response.data[0].values
-                
-                # Query the index with the embedded vector
-                results = self.index.query(
-                    vector=query_vector,
-                    top_k=self.k,
-                    include_metadata=True
-                )
-                
-                # Convert to LangChain Document format
-                docs = []
-                for match in results.matches:
-                    metadata = match.metadata or {}
-                    content = metadata.get('text', metadata.get('chunk_text', ''))
-                    docs.append(Document(
-                        page_content=content,
-                        metadata=metadata
-                    ))
-                return docs
-            except Exception as e:
-                print(f"Error querying Pinecone: {e}")
-                return []
+    from langchain_core.runnables import RunnableLambda
     
-    return PineconeIntegratedRetriever(index=index, k=k)
+    def retrieve_documents(query: str):
+        """
+        Query the index using integrated embeddings.
+        """
+        try:
+            from pinecone import Pinecone
+            import os
+            pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+            
+            # Generate query embedding using Pinecone's inference API
+            model_name = "multilingual-e5-large"
+            embedding_response = pc.inference.embed(
+                model=model_name,
+                inputs=[query],
+                parameters={"input_type": "query"}
+            )
+            
+            # Get the query vector
+            query_vector = embedding_response.data[0].values
+            
+            # Query the index with the embedded vector
+            results = index.query(
+                vector=query_vector,
+                top_k=k,
+                include_metadata=True
+            )
+            
+            # Convert to LangChain Document format
+            from langchain_core.documents import Document
+            docs = []
+            for match in results.matches:
+                metadata = match.metadata or {}
+                content = metadata.get('text', metadata.get('chunk_text', ''))
+                docs.append(Document(
+                    page_content=content,
+                    metadata=metadata
+                ))
+            return docs
+        except Exception as e:
+            print(f"Error querying Pinecone: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    return RunnableLambda(retrieve_documents)
 
 def split_documents(documents):
     """
