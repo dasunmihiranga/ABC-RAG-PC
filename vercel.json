@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "./app.py",
+            "src": "./main.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/app.py"
+            "dest": "/main.py"
         }
     ],
     "env": {
@@ -20,7 +20,7 @@
         "GROQ_API_KEY": "@groq_api_key"
     },
     "functions": {
-        "app.py": {
+        "main.py": {
             "memory": 1024,
             "maxDuration": 30
         }
