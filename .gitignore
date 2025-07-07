@@ -20,6 +20,8 @@ venv/
 # Operating System
 .DS_Store
 thumbs.db 
+
+# Vercel
 .vercel
 
 # ChromaDB (legacy - no longer used)

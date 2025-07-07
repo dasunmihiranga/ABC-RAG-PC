@@ -62,3 +62,43 @@ async def chat(request: ChatRequest) -> Dict[str, Any]:
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "message": "ABC Assistant Chatbot API",
+        "version": "2.0.0",
+        "description": "Professional company assistant powered by Agentic RAG with Pinecone",
+        "endpoints": {
+            "chat": "/chat (POST)",
+            "health": "/health (GET)",
+            "docs": "/docs (GET)",
+            "openapi": "/openapi.json (GET)"
+        },
+        "powered_by": "Pinecone + LangChain + FastAPI"
+    }
+
+@app.get("/info")
+async def system_info():
+    """System information for monitoring"""
+    try:
+        # Check if environment variables are available
+        pinecone_configured = bool(os.getenv("PINECONE_API_KEY"))
+        groq_configured = bool(os.getenv("GROQ_API_KEY"))
+        
+        return {
+            "status": "healthy",
+            "environment": {
+                "pinecone_configured": pinecone_configured,
+                "groq_configured": groq_configured,
+                "index_name": os.getenv("PINECONE_INDEX_NAME", "not-set"),
+                "region": os.getenv("PINECONE_REGION", "not-set")
+            },
+            "timestamp": str(os.popen('date').read().strip()) if os.name != 'nt' else "timestamp-unavailable"
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "error": str(e)
+        }
