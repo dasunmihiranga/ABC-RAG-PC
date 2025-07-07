@@ -11,13 +11,5 @@
             "src": "/(.*)",
             "dest": "/main.py"
         }
-    ],
-    "env": {
-        "PINECONE_API_KEY": "@pinecone_api_key",
-        "PINECONE_INDEX_NAME": "@pinecone_index_name",
-        "PINECONE_CLOUD": "@pinecone_cloud", 
-        "PINECONE_REGION": "@pinecone_region",
-        "GROQ_API_KEY": "@groq_api_key"
-    },
-    "regions": ["iad1"]
+    ]
 }
