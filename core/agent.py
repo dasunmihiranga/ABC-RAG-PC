@@ -24,11 +24,11 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
 
 def get_agent_chain():
     """
-    Initializes and returns the main ABC Assistant agent chain.
+    Initializes and returns the main ABC Assistant agent chain with Pinecone integrated embeddings.
     """
     llm = get_llm()
-    vector_store = get_vector_store()
-    retriever = get_retriever(vector_store)
+    index = get_vector_store()  # Returns Pinecone index directly
+    retriever = get_retriever(index)  # Custom retriever for integrated embeddings
 
     # Define the condition for the RunnableBranch
     def is_context_empty(input_dict):

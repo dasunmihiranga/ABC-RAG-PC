@@ -1,10 +1,16 @@
 # Agentic RAG Chatbot with Pinecone
 
-This project implements an Agentic RAG (Retrieval Augmented Generation) Chatbot using Pinecone as the vector database. The bot serves as a professional company assistant, capable of engaging with clients, understanding their needs, and effectively guiding them towards purchasing services and products.
-
-**Note:** This project has been migrated from ChromaDB to Pinecone for improved scalability and performance.
+This project implements an Agentic RAG (Retrieval Augmented Generation) Chatbot using Pinecone's integrated embeddings. The bot serves as a professional company assistant, capable of engaging with clients, understanding their needs, and effectively guiding them towards purchasing services and products.
 
 ## ![Untitled Diagram drawio](https://github.com/user-attachments/assets/6bf29358-d947-4904-acda-d2d072ffa83f)
+
+## Features
+
+- **Pinecone Integrated Embeddings**: Uses Pinecone's built-in embedding models - no local models or external embedding APIs needed
+- **Lightweight**: Minimal dependencies and cloud-native architecture  
+- **Scalable**: Serverless vector database with automatic scaling
+- **FastAPI**: Modern, high-performance web framework
+- **Agentic RAG**: Advanced retrieval-augmented generation with conversational agents
 
 ## Project Structure
 
@@ -17,18 +23,17 @@ This project implements an Agentic RAG (Retrieval Augmented Generation) Chatbot 
 ├── core/
 │   ├── __init__.py
 │   ├── agent.py
-│   ├── embeddings.py
-│   ├── vector_store.py        # Updated for Pinecone
+│   ├── embeddings.py          # Pinecone integrated embeddings
+│   ├── vector_store.py        # Pinecone with integrated embeddings
 │   ├── llm_setup.py
 │   └── prompt_templates.py
 ├── knowledge_base/
 │   ├── __init__.py
 │   └── docs/
-│       ├── abc_company_info.md
+│       └── abc_company_info.md
 └── scripts/
     ├── __init__.py
-    ├── ingest_data.py           # Updated for Pinecone
-    └── migrate_to_pinecone.py   # New migration script
+    └── ingest_data.py           # Pinecone data ingestion
 ```
 
 ## Setup and Installation
@@ -62,32 +67,30 @@ This project implements an Agentic RAG (Retrieval Augmented Generation) Chatbot 
 5.  **Environment Variables:**
     Create a `.env` file in the project directory and add your API keys:
     ```
-    # Pinecone Configuration
+    # Pinecone Configuration (with integrated embeddings)
     PINECONE_API_KEY=your_pinecone_api_key_here
-    PINECONE_INDEX_NAME=abc-assistant-index
+    PINECONE_INDEX_NAME=abc-assistant-integrated
     PINECONE_CLOUD=aws
     PINECONE_REGION=us-east-1
     
-    # Other API Keys
+    # LLM Configuration
     GROQ_API_KEY=your_groq_api_key_here
     ```
     
     You can use `.env.example` as a template.
 
-## Migration from ChromaDB
+## Setup Guide
 
-If you're migrating from the previous ChromaDB version:
+### Pinecone Setup
 
-1.  **Run the migration script:**
-    ```bash
-    python scripts/migrate_to_pinecone.py
-    ```
-
-2.  **Set up your Pinecone account:**
+1.  **Create a Pinecone account:**
     - Sign up at [Pinecone](https://www.pinecone.io/)
     - Create a new project
     - Get your API key from the console
     - Add it to your `.env` file
+
+2.  **Index Creation:**
+    The application will automatically create a Pinecone index with integrated embeddings when you run the ingestion script. No manual index creation needed!
 
 ## Running the Application
 
@@ -96,7 +99,7 @@ If you're migrating from the previous ChromaDB version:
     python scripts/ingest_data.py
     ```
     
-    This will create a Pinecone index and upload your documents to it.
+    This will create a Pinecone index with integrated embeddings and upload your documents to it.
 
 2.  **Run the FastAPI application:**
     ```bash
@@ -107,10 +110,11 @@ If you're migrating from the previous ChromaDB version:
 
 ## Key Features
 
-- **Pinecone Integration**: Scalable vector database for improved performance
-- **Integrated Embeddings**: Uses Pinecone's integrated embedding models
-- **Automatic Index Creation**: Automatically creates Pinecone index if it doesn't exist
+- **Pinecone Integrated Embeddings**: No local models or external embedding APIs needed
+- **Automatic Index Creation**: Creates Pinecone index with integrated embeddings automatically  
+- **Cloud-Native**: Lightweight, serverless architecture
 - **Environment-based Configuration**: Easy configuration through environment variables
+- **Modern FastAPI**: High-performance web framework with automatic API documentation
 
 ## API Endpoints
 

@@ -1,5 +1,5 @@
 # scripts/ingest_data.py
-# Script to process docs and load them into Pinecone 
+# Script to process docs and load them into Pinecone using integrated embeddings
 
 import os
 import sys
@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from langchain_community.document_loaders import TextLoader, UnstructuredMarkdownLoader
-from core.vector_store import get_vector_store, split_documents
+from core.vector_store import get_vector_store, split_documents, add_documents_to_index
 
 DOCS_PATH = "./knowledge_base/docs"
 
@@ -30,8 +30,8 @@ def load_documents():
     return documents
 
 if __name__ == "__main__":
-    print("Starting data ingestion to Pinecone...")
-    vector_store = get_vector_store()
+    print("Starting data ingestion to Pinecone with integrated embeddings...")
+    index = get_vector_store()  # Get Pinecone index directly
     
     print("Loading documents...")
     documents = load_documents()
@@ -41,6 +41,6 @@ if __name__ == "__main__":
     splits = split_documents(documents)
     print(f"Split into {len(splits)} chunks.")
 
-    print("Adding document chunks to Pinecone...")
-    vector_store.add_documents(splits)
-    print("Data ingestion to Pinecone complete.") 
+    print("Adding document chunks to Pinecone with integrated embeddings...")
+    add_documents_to_index(index, splits)
+    print("Data ingestion to Pinecone complete!") 

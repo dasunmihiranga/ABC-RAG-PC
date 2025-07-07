@@ -1,19 +1,15 @@
 # core/vector_store.py
-# Manages Pinecone initialization and RAG retrieval 
-from langchain_pinecone import PineconeVectorStore
+# Manages Pinecone initialization with integrated embeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pinecone import Pinecone, ServerlessSpec
-from core.embeddings import get_embedding_model
 import os
 from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv(override=True)
 
 def get_pinecone_client():
     """
     Initialize and return Pinecone client
     """
+    load_dotenv(override=True)
     api_key = os.getenv("PINECONE_API_KEY")
     if not api_key:
         raise ValueError("PINECONE_API_KEY not found in environment variables. Please check your .env file.")
@@ -25,87 +21,97 @@ def get_pinecone_client():
 
 def get_vector_store():
     """
-    Initializes and returns the Pinecone vector store.
-    If the index does not exist, it will be created.
+    Initializes and returns the Pinecone vector store with integrated embeddings.
+    Uses Pinecone's built-in embedding model - no local models needed.
     """
-    # Load environment variables
-    load_dotenv(override=True)
-    
     pc = get_pinecone_client()
-    embeddings = get_embedding_model()
     
-    # Get embedding dimension
-    try:
-        # Test embedding to get dimension
-        test_embedding = embeddings.embed_query("test")
-        embedding_dimension = len(test_embedding)
-        print(f"Embedding dimension: {embedding_dimension}")
-    except Exception as e:
-        print(f"Warning: Could not determine embedding dimension: {e}")
-        embedding_dimension = 384  # Default for sentence-transformers/all-MiniLM-L6-v2
+    index_name = os.getenv("PINECONE_INDEX_NAME", "abc-assistant-integrated")
+    print(f"Using Pinecone index with integrated embeddings: {index_name}")
     
-    index_name = os.getenv("PINECONE_INDEX_NAME", "abc-assistant-index")
-    print(f"Using Pinecone index: {index_name}")
-    
-    # Check if index exists, if not create it
+    # Check if index exists, if not create it with integrated embeddings
     try:
         if not pc.has_index(index_name):
-            print(f"Index {index_name} does not exist. Creating new index...")
-            # Create index with correct dimensions for HuggingFace embeddings
-            pc.create_index(
+            print(f"Index {index_name} does not exist. Creating new index with integrated embeddings...")
+            # Create index with integrated embeddings model
+            pc.create_index_for_model(
                 name=index_name,
-                dimension=embedding_dimension,
-                metric="cosine",
-                spec=ServerlessSpec(
-                    cloud=os.getenv("PINECONE_CLOUD", "aws"),
-                    region=os.getenv("PINECONE_REGION", "us-east-1")
-                )
+                cloud=os.getenv("PINECONE_CLOUD", "aws"),
+                region=os.getenv("PINECONE_REGION", "us-east-1"),
+                embed={
+                    "model": "multilingual-e5-large",
+                    "field_map": {"text": "chunk_text"}
+                }
             )
-            print(f"Created new Pinecone index: {index_name} with dimension {embedding_dimension}")
+            print(f"Created new Pinecone index with integrated embeddings: {index_name}")
         else:
-            # Check if existing index has correct dimensions
-            index_info = pc.describe_index(index_name)
-            existing_dimension = index_info.dimension
-            print(f"Existing index dimension: {existing_dimension}")
-            
-            if existing_dimension != embedding_dimension:
-                print(f"Dimension mismatch! Index has {existing_dimension}, embeddings have {embedding_dimension}")
-                # Create a new index with a different name
-                new_index_name = f"{index_name}-{embedding_dimension}d"
-                if not pc.has_index(new_index_name):
-                    print(f"Creating new index {new_index_name} with correct dimensions...")
-                    pc.create_index(
-                        name=new_index_name,
-                        dimension=embedding_dimension,
-                        metric="cosine",
-                        spec=ServerlessSpec(
-                            cloud=os.getenv("PINECONE_CLOUD", "aws"),
-                            region=os.getenv("PINECONE_REGION", "us-east-1")
-                        )
-                    )
-                    index_name = new_index_name
-                    print(f"Created new index: {index_name}")
-                else:
-                    index_name = new_index_name
-                    print(f"Using existing index: {index_name}")
-            else:
-                print(f"Using existing index: {index_name}")
+            print(f"Using existing index: {index_name}")
     except Exception as e:
         raise ValueError(f"Failed to check or create Pinecone index. Error: {str(e)}")
     
-    # Create vector store
-    vector_store = PineconeVectorStore(
-        index_name=index_name,
-        embedding=embeddings
-    )
-    
-    return vector_store
+    # Return the index directly for integrated embeddings
+    return pc.Index(index_name)
 
-def get_retriever(vector_store, k=4):
+def get_retriever(index, k=4):
     """
-    Returns a retriever for the given vector store.
+    Returns a custom retriever that works with Pinecone's integrated embeddings.
     """
-    return vector_store.as_retriever(search_kwargs={"k": k})
+    from langchain_core.retrievers import BaseRetriever
+    from langchain_core.documents import Document
+    from langchain_core.callbacks import CallbackManagerForRetrieverRun
+    from typing import List, Any
+    from pydantic import Field
+
+    class PineconeIntegratedRetriever(BaseRetriever):
+        index: Any = Field(description="The Pinecone index")
+        k: int = Field(default=4, description="Number of documents to return")
+        
+        class Config:
+            arbitrary_types_allowed = True
+        
+        def _get_relevant_documents(
+            self, query: str, *, run_manager: CallbackManagerForRetrieverRun = None
+        ) -> List[Document]:
+            """
+            Query the index using integrated embeddings.
+            """
+            try:
+                from pinecone import Pinecone
+                pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+                
+                # Generate query embedding using Pinecone's inference API
+                model_name = "multilingual-e5-large"
+                embedding_response = pc.inference.embed(
+                    model=model_name,
+                    inputs=[query],
+                    parameters={"input_type": "query"}
+                )
+                
+                # Get the query vector
+                query_vector = embedding_response.data[0].values
+                
+                # Query the index with the embedded vector
+                results = self.index.query(
+                    vector=query_vector,
+                    top_k=self.k,
+                    include_metadata=True
+                )
+                
+                # Convert to LangChain Document format
+                docs = []
+                for match in results.matches:
+                    metadata = match.metadata or {}
+                    content = metadata.get('text', metadata.get('chunk_text', ''))
+                    docs.append(Document(
+                        page_content=content,
+                        metadata=metadata
+                    ))
+                return docs
+            except Exception as e:
+                print(f"Error querying Pinecone: {e}")
+                return []
+    
+    return PineconeIntegratedRetriever(index=index, k=k)
 
 def split_documents(documents):
     """
@@ -116,4 +122,58 @@ def split_documents(documents):
         chunk_overlap=200,
         add_start_index=True,
     )
-    return text_splitter.split_documents(documents) 
+    return text_splitter.split_documents(documents)
+
+def add_documents_to_index(index, documents):
+    """
+    Add documents to Pinecone index using integrated embeddings.
+    For integrated embeddings, we need to use the inference namespace.
+    """
+    import uuid
+    
+    # Get the Pinecone client to use inference API
+    from pinecone import Pinecone
+    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    
+    # Prepare data for embedding and upsert
+    texts_to_embed = []
+    metadata_list = []
+    ids = []
+    
+    for i, doc in enumerate(documents):
+        doc_id = str(uuid.uuid4())
+        ids.append(doc_id)
+        texts_to_embed.append(doc.page_content)
+        metadata_list.append({
+            "text": doc.page_content,
+            **doc.metadata
+        })
+    
+    try:
+        # Use the inference API to embed and upsert
+        # For integrated embeddings, we use the inference.embed method
+        model_name = "multilingual-e5-large"  # Pinecone's integrated model
+        
+        # Generate embeddings using Pinecone's inference API
+        embeddings_response = pc.inference.embed(
+            model=model_name,
+            inputs=texts_to_embed,
+            parameters={"input_type": "passage"}
+        )
+        
+        # Prepare vectors for upsert
+        vectors_to_upsert = []
+        for i, embedding in enumerate(embeddings_response.data):
+            vectors_to_upsert.append({
+                "id": ids[i],
+                "values": embedding.values,
+                "metadata": metadata_list[i]
+            })
+        
+        # Upsert the vectors
+        index.upsert(vectors=vectors_to_upsert)
+        print(f"Successfully upserted {len(vectors_to_upsert)} documents with integrated embeddings")
+        
+    except Exception as e:
+        print(f"Error upserting documents: {e}")
+        raise 

@@ -1,20 +1,16 @@
 # requirements.txt
-# Python dependencies (pip install -r requirements.txt)
+# Python dependencies for Pinecone-only vector operations
 
 fastapi
 uvicorn
 langchain
 pinecone
-huggingface-hub
-transformers
-sentence-transformers
 groq
 python-dotenv
 langchain-community
 unstructured
-langchain-huggingface
 langchain-pinecone
 markdown
 langchain-groq
 
-# Add any other necessary dependencies here 
+# Note: No embedding model dependencies needed - using Pinecone's integrated embeddings 

@@ -1,18 +1,45 @@
 # core/embeddings.py
-# Initializes and provides the Hugging Face Embedding Model 
+# Pinecone integrated embeddings - no local models needed
 
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from typing import List
+
+class PineconeIntegratedEmbeddings:
+    """
+    Embeddings class for Pinecone's integrated embedding models.
+    When using Pinecone's integrated embeddings, we don't need to generate 
+    embeddings locally - Pinecone handles this automatically on upsert and query.
+    """
+    
+    def __init__(self):
+        # These values match Pinecone's integrated model
+        self.model_name = "multilingual-e5-large"  # Pinecone's integrated model
+        self.dimensions = 1024  # Dimension for multilingual-e5-large
+        
+    def embed_query(self, text: str) -> List[float]:
+        """
+        This method should not be called when using Pinecone integrated embeddings.
+        Pinecone handles embedding generation automatically during queries.
+        """
+        raise NotImplementedError(
+            "When using Pinecone integrated embeddings, embedding generation "
+            "is handled automatically by Pinecone during queries. "
+            "This method should not be called."
+        )
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """
+        This method should not be called when using Pinecone integrated embeddings.
+        Pinecone handles embedding generation automatically during upserts.
+        """
+        raise NotImplementedError(
+            "When using Pinecone integrated embeddings, embedding generation "
+            "is handled automatically by Pinecone during upserts. "
+            "This method should not be called."
+        )
 
 def get_embedding_model():
     """
-    Initializes and returns a Hugging Face Sentence Transformer embedding model.
+    Returns the Pinecone integrated embedding model configuration.
+    No local model loading or API calls needed.
     """
-    model_name = "sentence-transformers/all-MiniLM-L6-v2"
-    model_kwargs = {'device': 'cpu'}  # Use 'cuda' if you have a GPU
-    encode_kwargs = {'normalize_embeddings': False} # changed to false (default was True)
-    hf = HuggingFaceEmbeddings(
-        model_name=model_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs
-    )
-    return hf 
+    return PineconeIntegratedEmbeddings() 
