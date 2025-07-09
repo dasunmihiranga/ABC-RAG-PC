@@ -38,8 +38,16 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest) -> Dict[str, Any]:
     try:
+        # Additional validation for query length and content
+        query = request.query.strip()
+        if len(query) > 1000:  # Limit query length
+            return {"response": "Please keep your questions concise. How can ABC help you today?"}
+        
+        if not query:
+            return {"response": "Hello! I'm ABCBot, your virtual assistant for ABC company. How can I help you learn about our services today?"}
+        
         response_raw = agent_chain.invoke(
-            {"input": request.query},
+            {"input": query},
             config={
                 "configurable": {"session_id": request.session_id}
             },
