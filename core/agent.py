@@ -1,12 +1,13 @@
 # core/agent.py
-# Contains the main Agent (ABCBot) logic 
+# Contains the main Agent (ABCBot) logic
 
 from langchain_core.runnables import RunnablePassthrough, RunnableWithMessageHistory, RunnableLambda, RunnableBranch
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory, RedisChatMessageHistory
 from operator import itemgetter
+import os
 
 from core.llm_setup import get_llm
 from core.vector_store import get_vector_store, get_retriever
@@ -37,30 +38,42 @@ IRRELEVANT_KEYWORDS = [
 def is_abc_related_question(query: str) -> bool:
     """Check if the question is related to ABC company or business inquiries."""
     query_lower = query.lower()
-    
+
     # Check for irrelevant topics first
     for keyword in IRRELEVANT_KEYWORDS:
         if keyword in query_lower:
             return False
-    
+
     # Check for ABC-related keywords
     for keyword in ABC_KEYWORDS:
         if keyword in query_lower:
             return True
-    
+
     # Check for business-related inquiry patterns
     business_patterns = [
         "i need", "looking for", "want to", "interested in", "can you help",
         "tell me more", "what is", "how does", "quote", "estimate", "consultation"
     ]
-    
+
     for pattern in business_patterns:
         if pattern in query_lower:
             return True
-    
+
     return False
 
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    redis_url = os.getenv("REDIS_URL")
+    if redis_url:
+        return RedisChatMessageHistory(
+            session_id=session_id,
+            url=redis_url,
+            key_prefix="abc-chat:",
+            ttl=60 * 60 * 24 * 7,
+        )
+
+    if os.getenv("APP_ENV") == "production":
+        raise RuntimeError("REDIS_URL is required for persistent chat history in production.")
+
     if session_id not in store:
         store[session_id] = ChatMessageHistory()
     return store[session_id]
@@ -83,19 +96,19 @@ def get_agent_chain():
         context = input_dict.get("context")
         if not context:
             return True
-        
+
         # Check if any retrieved document has meaningful content
         meaningful_content = False
         for doc in context:
             if doc.page_content.strip() and len(doc.page_content.strip()) > 20:
                 meaningful_content = True
                 break
-        
+
         return not meaningful_content
 
     # Define the branch for irrelevant questions
     irrelevant_question_branch = RunnableLambda(lambda x: OUT_OF_KNOWLEDGE_RESPONSE)
-    
+
     # Define the branch for when context is empty
     out_of_knowledge_branch = RunnableLambda(lambda x: "I don't have specific information about that in ABC's knowledge base. For detailed inquiries, please contact us at info@abc.com or call 0123456789.")
 
@@ -103,17 +116,17 @@ def get_agent_chain():
     def process_with_context_validation(input_dict):
         context = input_dict.get("context", [])
         query = input_dict.get("input", "")
-        
+
         # Double-check if the retrieved context is actually relevant to ABC
         relevant_context = []
         for doc in context:
             content_lower = doc.page_content.lower()
             if any(keyword in content_lower for keyword in ["abc", "company", "service", "development", "software"]):
                 relevant_context.append(doc)
-        
+
         if not relevant_context:
             return "I don't have specific information about that in ABC's knowledge base. For detailed inquiries, please contact us at info@abc.com or call 0123456789."
-        
+
         # Update the context with only relevant documents
         input_dict["context"] = relevant_context
         return input_dict
@@ -146,4 +159,4 @@ def get_agent_chain():
         input_messages_key="input",
         history_messages_key="chat_history",
     )
-    return with_message_history 
+    return with_message_history

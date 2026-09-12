@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+.vercel
+venv
+.venv
+__pycache__
+*.py[cod]
+test_*.py
+tests
+knowledge_base
+scripts
+README.md
+VERCEL_DEPLOYMENT.md

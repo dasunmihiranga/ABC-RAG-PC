@@ -16,6 +16,6 @@ def get_llm():
     llm = ChatGroq(
         temperature=0,
         groq_api_key=groq_api_key,
-        model_name="llama3-70b-8192" # User specified model
+        model_name=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
     )
     return llm 

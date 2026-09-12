@@ -1,12 +1,13 @@
 # main.py
 # This is the FastAPI application entry point, defines /chat API 
 # Updated to work with Pinecone vector database instead of ChromaDB
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
 from fastapi.middleware.cors import CORSMiddleware
 from core.agent import get_agent_chain
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage
+from functools import lru_cache
 import os
 from dotenv import load_dotenv
 
@@ -28,8 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the agent chain
-agent_chain = get_agent_chain()
+@lru_cache(maxsize=1)
+def agent_chain():
+    """Initialize external clients when chat is first requested."""
+    return get_agent_chain()
 
 class ChatRequest(BaseModel):
     query: str
@@ -46,7 +49,7 @@ async def chat(request: ChatRequest) -> Dict[str, Any]:
         if not query:
             return {"response": "Hello! I'm ABCBot, your virtual assistant for ABC company. How can I help you learn about our services today?"}
         
-        response_raw = agent_chain.invoke(
+        response_raw = agent_chain().invoke(
             {"input": query},
             config={
                 "configurable": {"session_id": request.session_id}

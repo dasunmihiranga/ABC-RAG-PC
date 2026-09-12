@@ -11,6 +11,7 @@ dist/
 
 # Virtual environment
 venv/
+.venv/
 .env
 
 # IDE
@@ -33,6 +34,7 @@ chroma_db/
 *.index
 
 # Temporary and test files
-test_*.py
+/test_*.py
 temp/
 tmp/
+.env*

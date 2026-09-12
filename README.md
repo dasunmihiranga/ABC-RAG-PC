@@ -75,9 +75,11 @@ This project implements an Agentic RAG (Retrieval Augmented Generation) Chatbot 
     
     # LLM Configuration
     GROQ_API_KEY=your_groq_api_key_here
+    GROQ_MODEL=openai/gpt-oss-120b
+    # REDIS_URL=rediss://default:password@your-redis-host:6379/0
     ```
     
-    You can use `.env.example` as a template.
+    You can use `.env.example` as a template. For Docker deployment on Vercel, see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
 
 ## Setup Guide
 
